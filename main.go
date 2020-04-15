@@ -10,6 +10,7 @@ import (
   "strings"
 	"github.com/bwmarrin/discordgo"
   "github.com/boltdb/bolt"
+  "regexp"
 )
 
 // Variables used for command line parameters
@@ -71,8 +72,9 @@ func parseCommand (s string) string {
 
 // Return all command arguments, i.e. all words except from the first one.
 func parseArguments (s string) []string {
-  arg := strings.Split(s, " ")
-  return arg[1:]
+  re := regexp.MustCompile(`[^\s"']+|([^\s"']*"([^"]*)"[^\s"']*)+|'([^']*)`)
+	args := re.FindAllString(s, -1)
+  return args[1:]
 }
 
 // This function will be called (due to AddHandler above) every time a new
@@ -94,9 +96,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
   method := reflect.ValueOf(bot).MethodByName(parseCommand(m.Content))
-  // Trim all unnecessary arguments. 
-  inputs = inputs[:method.Type().NumIn()]
   if method.IsValid() && !method.IsZero() {
+    // Trim all unnecessary arguments. 
+    inputs = inputs[:method.Type().NumIn()]
 	  method.Call(inputs)
   }
 }
