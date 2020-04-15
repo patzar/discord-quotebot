@@ -60,10 +60,22 @@ func parseCommand (s string) string {
   return ""
 }
 
+func parseArguments (s string) []string {
+  arg := strings.Split(s, " ")
+  return arg[1:]
+}
+
 // This function will be called (due to AddHandler above) every time a new
 // message is created on any channel that the autenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-  inputs := []reflect.Value{reflect.ValueOf(s), reflect.ValueOf(m)}
+  args := parseArguments(m.Content)
+  inputs := make([]reflect.Value, len(args)+2)
+  inputs[0] = reflect.ValueOf(s)
+  inputs[1] = reflect.ValueOf(m)
+  for i, _ := range args {
+        inputs[i+2] = reflect.ValueOf(args[i])
+    }
+  // inputs := []reflect.Value{reflect.ValueOf(s), reflect.ValueOf(m)}
 
 	// Ignore all messages created by the bot itself
 	// This isn't required in this specific example but it's a good practice.
@@ -71,6 +83,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
   method := reflect.ValueOf(bot).MethodByName(parseCommand(m.Content))
+  inputs = inputs[:method.Type().NumIn()]
   if method.IsValid() && !method.IsZero() {
 	  method.Call(inputs)
   }
