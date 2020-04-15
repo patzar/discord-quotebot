@@ -52,6 +52,8 @@ func main() {
 	dg.Close()
 }
 
+// Converts input string to a reflection-compatible corresponding method string, e.g. 
+// .foo bar -> Foo
 func parseCommand (s string) string {
   com := strings.Split(strings.TrimLeft(s, "."), " ")
   if len(com) > 0 {
@@ -60,6 +62,7 @@ func parseCommand (s string) string {
   return ""
 }
 
+// Return all command arguments, i.e. all words except from the first one.
 func parseArguments (s string) []string {
   arg := strings.Split(s, " ")
   return arg[1:]
@@ -69,13 +72,14 @@ func parseArguments (s string) []string {
 // message is created on any channel that the autenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
   args := parseArguments(m.Content)
+  // Pass the original session and message arguments.
   inputs := make([]reflect.Value, len(args)+2)
   inputs[0] = reflect.ValueOf(s)
   inputs[1] = reflect.ValueOf(m)
+  // Pass any additional arguments based on the message itself.
   for i, _ := range args {
         inputs[i+2] = reflect.ValueOf(args[i])
     }
-  // inputs := []reflect.Value{reflect.ValueOf(s), reflect.ValueOf(m)}
 
 	// Ignore all messages created by the bot itself
 	// This isn't required in this specific example but it's a good practice.
@@ -83,6 +87,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
   method := reflect.ValueOf(bot).MethodByName(parseCommand(m.Content))
+  // Trim all unnecessary arguments. 
   inputs = inputs[:method.Type().NumIn()]
   if method.IsValid() && !method.IsZero() {
 	  method.Call(inputs)
