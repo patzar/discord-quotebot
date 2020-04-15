@@ -96,7 +96,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
   method := reflect.ValueOf(bot).MethodByName(parseCommand(m.Content))
-  if method.IsValid() && !method.IsZero() {
+  if method.IsValid() && len(inputs) >= method.Type().NumIn(){
     // Trim all unnecessary arguments. 
     inputs = inputs[:method.Type().NumIn()]
 	  method.Call(inputs)
