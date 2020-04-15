@@ -6,13 +6,15 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
+  "reflect"
+  "strings"
 	"github.com/bwmarrin/discordgo"
 )
 
 // Variables used for command line parameters
 var (
 	Token string
+  bot Bot
 )
 
 func init() {
@@ -50,22 +52,26 @@ func main() {
 	dg.Close()
 }
 
+func parseCommand (s string) string {
+  com := strings.Split(strings.TrimLeft(s, "."), " ")
+  if len(com) > 0 {
+	return strings.Title(com[0])
+  }
+  return ""
+}
+
 // This function will be called (due to AddHandler above) every time a new
 // message is created on any channel that the autenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+  inputs := []reflect.Value{reflect.ValueOf(s), reflect.ValueOf(m)}
 
 	// Ignore all messages created by the bot itself
 	// This isn't required in this specific example but it's a good practice.
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	// If the message is "ping" reply with "Pong!"
-	if m.Content == "ping" {
-		s.ChannelMessageSend(m.ChannelID, "Pong!")
-	}
-
-	// If the message is "pong" reply with "Ping!"
-	if m.Content == "pong" {
-		s.ChannelMessageSend(m.ChannelID, "Ping!")
-	}
+  method := reflect.ValueOf(bot).MethodByName(parseCommand(m.Content))
+  if method.IsValid() && !method.IsZero() {
+	  method.Call(inputs)
+  }
 }
