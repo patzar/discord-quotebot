@@ -9,6 +9,7 @@ import (
   "reflect"
   "strings"
 	"github.com/bwmarrin/discordgo"
+  "github.com/boltdb/bolt"
 )
 
 // Variables used for command line parameters
@@ -24,6 +25,12 @@ func init() {
 }
 
 func main() {
+  db, err := bolt.Open("my.db", 0600, nil)
+	if err != nil {
+		panic(err)
+	}
+  defer db.Close()
+  bot = Bot{db}
 
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + Token)
