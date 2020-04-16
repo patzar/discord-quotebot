@@ -11,6 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
   "github.com/boltdb/bolt"
   "regexp"
+  "github.com/google/logger"
 )
 
 // Variables used for command line parameters
@@ -19,6 +20,9 @@ var (
   bot Bot
 )
 
+const logPath = "bot.log"
+var verbose = flag.Bool("verbose", false, "print info level logs to stdout")
+
 func init() {
 
 	flag.StringVar(&Token, "t", "", "Bot Token")
@@ -26,6 +30,14 @@ func init() {
 }
 
 func main() {
+  lf, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
+  if err != nil {
+    logger.Fatalf("Failed to open log file: %v", err)
+  }
+  fmt.Println(*lf)
+  defer lf.Close()
+  defer logger.Init("LoggerExample", true, false, lf).Close()
+
   db, err := bolt.Open("my.db", 0600, nil)
 	if err != nil {
 		panic(err)
@@ -36,7 +48,7 @@ func main() {
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
-		fmt.Println("error creating Discord session,", err)
+		logger.Fatalf("error creating Discord session,", err)
 		return
 	}
 
@@ -46,7 +58,7 @@ func main() {
 	// Open a websocket connection to Discord and begin listening.
 	err = dg.Open()
 	if err != nil {
-		fmt.Println("error opening connection,", err)
+		logger.Fatalf("error opening connection,", err)
 		return
 	}
 
@@ -74,12 +86,16 @@ func parseCommand (s string) string {
 func parseArguments (s string) []string {
   re := regexp.MustCompile(`[^\s"']+|([^\s"']*"([^"]*)"[^\s"']*)+|'([^']*)`)
 	args := re.FindAllString(s, -1)
+  if len(args) == 0 {
+    return []string {}
+  }
   return args[1:]
 }
 
 // This function will be called (due to AddHandler above) every time a new
 // message is created on any channel that the autenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+  logger.Info(m.Content)
   args := parseArguments(m.Content)
   // Pass the original session and message arguments.
   inputs := make([]reflect.Value, len(args)+2)
