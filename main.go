@@ -103,9 +103,11 @@ func messageReactionAdd(s* discordgo.Session, m* discordgo.MessageReactionAdd) {
       logger.Fatalf("error loading Discord message,", err)
       return
     }
-    bot.quoteImpl(message.Author.Username, message.Content)
-    quote := fmt.Sprintf("Saved quote: \n > %s \n > -%s", message.Content, message.Author.Username)
-    s.ChannelMessageSend(m.ChannelID, quote)
+    saved := bot.quoteImpl(message.Author.Username, message.Content, m.MessageID)
+    if saved {
+      quote := fmt.Sprintf("Saved quote: \n > %s \n > -%s", message.Content, message.Author.Username)
+      s.ChannelMessageSend(m.ChannelID, quote)
+    }
   }
 }
 
