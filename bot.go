@@ -24,7 +24,7 @@ func (b Bot) Text(s *discordgo.Session, m *discordgo.MessageCreate, t string) {
     s.ChannelMessageSend(m.ChannelID, t)
 }
 
-func (b Bot) Quote(s *discordgo.Session, m *discordgo.MessageCreate, user string, text string) {
+func (b Bot) quoteImpl(user string, text string) {
     b.db.Update(func(tx *bolt.Tx) error {
     bucket, err := tx.CreateBucketIfNotExists([]byte("QuoteBucket"))
     v := bucket.Get([]byte(user))
@@ -35,15 +35,11 @@ func (b Bot) Quote(s *discordgo.Session, m *discordgo.MessageCreate, user string
       userQuote = UserQuotes{[]string{}, user}
     }
     userQuote.Quotes = append(userQuote.Quotes, text)
-    fmt.Println(userQuote)
-    fmt.Println(v)
-    fmt.Println(user)
     userQuoteSerialized, err := json.Marshal(userQuote)
 
     err = bucket.Put([]byte(user), []byte(userQuoteSerialized))
     return err
   })
-    s.ChannelMessageSend(m.ChannelID, "Saved quote.")
 }
 
 func (b Bot) Randomquote(s *discordgo.Session, m *discordgo.MessageCreate, user string) {
@@ -53,7 +49,6 @@ func (b Bot) Randomquote(s *discordgo.Session, m *discordgo.MessageCreate, user 
     if len(v) > 0 {
       var userQuote UserQuotes
 	    json.Unmarshal(v, &userQuote)
-      fmt.Println(userQuote)
       if len(userQuote.Quotes) > 0 {
         q := userQuote.Quotes[rand.Intn(len(userQuote.Quotes))]
         s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s", q))
@@ -70,7 +65,6 @@ func (b Bot) Lastquote(s *discordgo.Session, m *discordgo.MessageCreate, user st
     if len(v) > 0 {
       var userQuote UserQuotes
 	    json.Unmarshal(v, &userQuote)
-      fmt.Println(userQuote)
       if len(userQuote.Quotes) > 0 {
         q := userQuote.Quotes[len(userQuote.Quotes)-1]
         s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s", q))

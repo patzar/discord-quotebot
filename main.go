@@ -54,6 +54,7 @@ func main() {
 
 	// Register the messageCreate func as a callback for MessageCreate events.
 	dg.AddHandler(messageCreate)
+  dg.AddHandler(messageReactionAdd)
 
 	// Open a websocket connection to Discord and begin listening.
 	err = dg.Open()
@@ -90,6 +91,19 @@ func parseArguments (s string) []string {
     return []string {}
   }
   return args[1:]
+}
+
+func messageReactionAdd(s* discordgo.Session, m* discordgo.MessageReactionAdd) {
+  fmt.Println(m.Emoji.Name)
+  if(m.Emoji.Name == "❤️") {
+    message, err := s.ChannelMessage(m.ChannelID, m.MessageID)
+    if err != nil {
+      logger.Fatalf("error loading Discord message,", err)
+      return
+    }
+    bot.quoteImpl(message.Author.Username, message.Content)
+    s.ChannelMessageSend(m.ChannelID, "Saved quote.")
+  }
 }
 
 // This function will be called (due to AddHandler above) every time a new
