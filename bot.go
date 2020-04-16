@@ -16,6 +16,8 @@ type UserQuotes struct {
   Username string
 }
 
+type selector func([]string) string
+
 func (b Bot) quoteImpl(user string, text string) {
     b.db.Update(func(tx *bolt.Tx) error {
     bucket, err := tx.CreateBucketIfNotExists([]byte("QuoteBucket"))
@@ -34,7 +36,7 @@ func (b Bot) quoteImpl(user string, text string) {
   })
 }
 
-func (b Bot) Randomquote(s *discordgo.Session, m *discordgo.MessageCreate, user string) {
+func (b Bot) viewQuote(s *discordgo.Session, m *discordgo.MessageCreate, user string, fn selector) {
   b.db.View(func(tx *bolt.Tx) error {
     bucket := tx.Bucket([]byte("QuoteBucket"))
     v := bucket.Get([]byte(user))
@@ -42,26 +44,22 @@ func (b Bot) Randomquote(s *discordgo.Session, m *discordgo.MessageCreate, user 
       var userQuote UserQuotes
 	    json.Unmarshal(v, &userQuote)
       if len(userQuote.Quotes) > 0 {
-        q := userQuote.Quotes[rand.Intn(len(userQuote.Quotes))]
-        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s", q))
+        q := fn(userQuote.Quotes)
+        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> %s", q))
       }
     }
     return nil
   })
 }
 
+func (b Bot) Randomquote(s *discordgo.Session, m *discordgo.MessageCreate, user string) {
+  b.viewQuote(s, m, user, func(quotes []string) string {
+    return quotes[rand.Intn(len(quotes))]
+  })
+}
+
 func (b Bot) Lastquote(s *discordgo.Session, m *discordgo.MessageCreate, user string) {
-  b.db.View(func(tx *bolt.Tx) error {
-    bucket := tx.Bucket([]byte("QuoteBucket"))
-    v := bucket.Get([]byte(user))
-    if len(v) > 0 {
-      var userQuote UserQuotes
-	    json.Unmarshal(v, &userQuote)
-      if len(userQuote.Quotes) > 0 {
-        q := userQuote.Quotes[len(userQuote.Quotes)-1]
-        s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s", q))
-      }
-    }
-    return nil
+    b.viewQuote(s, m, user, func(quotes []string) string {
+    return quotes[len(quotes)-1]
   })
 }

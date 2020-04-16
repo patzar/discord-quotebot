@@ -84,6 +84,8 @@ func parseCommand (s string) string {
 }
 
 // Return all command arguments, i.e. all words except from the first one.
+// If the arguments include brackets, consider them as one arguments, e.g.
+// .foo bar "hello world" -> ["bar", "hello world"]
 func parseArguments (s string) []string {
   re := regexp.MustCompile(`[^\s"']+|([^\s"']*"([^"]*)"[^\s"']*)+|'([^']*)`)
 	args := re.FindAllString(s, -1)
@@ -102,7 +104,8 @@ func messageReactionAdd(s* discordgo.Session, m* discordgo.MessageReactionAdd) {
       return
     }
     bot.quoteImpl(message.Author.Username, message.Content)
-    s.ChannelMessageSend(m.ChannelID, "Saved quote.")
+    quote := fmt.Sprintf("Saved quote: \n > %s \n > -%s", message.Content, message.Author.Username)
+    s.ChannelMessageSend(m.ChannelID, quote)
   }
 }
 
