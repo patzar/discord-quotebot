@@ -36,7 +36,7 @@ func main() {
   }
   fmt.Println(*lf)
   defer lf.Close()
-  defer logger.Init("LoggerExample", true, false, lf).Close()
+  defer logger.Init("LoggerExample", false, false, lf).Close()
 
   db, err := bolt.Open("my.db", 0600, nil)
 	if err != nil {
