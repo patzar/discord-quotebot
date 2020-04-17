@@ -5,22 +5,24 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"reflect"
+	"regexp"
+	"strings"
 	"syscall"
-  "reflect"
-  "strings"
+
+	"github.com/boltdb/bolt"
 	"github.com/bwmarrin/discordgo"
-  "github.com/boltdb/bolt"
-  "regexp"
-  "github.com/google/logger"
+	"github.com/google/logger"
 )
 
 // Variables used for command line parameters
 var (
 	Token string
-  bot Bot
+	bot   Bot
 )
 
 const logPath = "bot.log"
+
 var verbose = flag.Bool("verbose", false, "print info level logs to stdout")
 
 func init() {
@@ -30,20 +32,20 @@ func init() {
 }
 
 func main() {
-  lf, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
-  if err != nil {
-    logger.Fatalf("Failed to open log file: %v", err)
-  }
-  fmt.Println(*lf)
-  defer lf.Close()
-  defer logger.Init("LoggerExample", false, false, lf).Close()
+	lf, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0660)
+	if err != nil {
+		logger.Fatalf("Failed to open log file: %v", err)
+	}
+	fmt.Println(*lf)
+	defer lf.Close()
+	defer logger.Init("LoggerExample", false, false, lf).Close()
 
-  db, err := bolt.Open("my.db", 0600, nil)
+	db, err := bolt.Open("my.db", 0600, nil)
 	if err != nil {
 		panic(err)
 	}
-  defer db.Close()
-  bot = Bot{db}
+	defer db.Close()
+	bot = Bot{db}
 
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + Token)
@@ -54,7 +56,7 @@ func main() {
 
 	// Register the messageCreate func as a callback for MessageCreate events.
 	dg.AddHandler(messageCreate)
-  dg.AddHandler(messageReactionAdd)
+	dg.AddHandler(messageReactionAdd)
 
 	// Open a websocket connection to Discord and begin listening.
 	err = dg.Open()
@@ -73,67 +75,67 @@ func main() {
 	dg.Close()
 }
 
-// Converts input string to a reflection-compatible corresponding method string, e.g. 
+// Converts input string to a reflection-compatible corresponding method string, e.g.
 // .foo bar -> Foo
-func parseCommand (s string) string {
-  com := strings.Split(strings.TrimLeft(s, "."), " ")
-  if len(com) > 0 {
-	return strings.Title(com[0])
-  }
-  return ""
+func parseCommand(s string) string {
+	com := strings.Split(strings.TrimLeft(s, "."), " ")
+	if len(com) > 0 {
+		return strings.Title(com[0])
+	}
+	return ""
 }
 
 // Return all command arguments, i.e. all words except from the first one.
 // If the arguments include brackets, consider them as one arguments, e.g.
 // .foo bar "hello world" -> ["bar", "hello world"]
-func parseArguments (s string) []string {
-  re := regexp.MustCompile(`[^\s"']+|([^\s"']*"([^"]*)"[^\s"']*)+|'([^']*)`)
+func parseArguments(s string) []string {
+	re := regexp.MustCompile(`[^\s"']+|([^\s"']*"([^"]*)"[^\s"']*)+|'([^']*)`)
 	args := re.FindAllString(s, -1)
-  if len(args) == 0 {
-    return []string {}
-  }
-  return args[1:]
+	if len(args) == 0 {
+		return []string{}
+	}
+	return args[1:]
 }
 
-func messageReactionAdd(s* discordgo.Session, m* discordgo.MessageReactionAdd) {
-  fmt.Println(m.Emoji.Name)
-  if(m.Emoji.Name == "❤️") {
-    message, err := s.ChannelMessage(m.ChannelID, m.MessageID)
-    if err != nil {
-      logger.Fatalf("error loading Discord message,", err)
-      return
-    }
-    saved := bot.quoteImpl(message.Author.Username, message.Content, m.MessageID)
-    if saved {
-      quote := fmt.Sprintf("Saved quote: \n > %s \n > -%s", message.Content, message.Author.Username)
-      s.ChannelMessageSend(m.ChannelID, quote)
-    }
-  }
+func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
+	fmt.Println(m.Emoji.Name)
+	if m.Emoji.Name == "❤️" {
+		message, err := s.ChannelMessage(m.ChannelID, m.MessageID)
+		if err != nil {
+			logger.Fatalf("error loading Discord message,", err)
+			return
+		}
+		saved := bot.quoteImpl(message.Author.Username, message.Content, m.MessageID)
+		if saved {
+			quote := fmt.Sprintf("Saved quote: \n > %s \n > -%s", message.Content, message.Author.Username)
+			s.ChannelMessageSend(m.ChannelID, quote)
+		}
+	}
 }
 
 // This function will be called (due to AddHandler above) every time a new
 // message is created on any channel that the autenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-  logger.Info(m.Content)
-  args := parseArguments(m.Content)
-  // Pass the original session and message arguments.
-  inputs := make([]reflect.Value, len(args)+2)
-  inputs[0] = reflect.ValueOf(s)
-  inputs[1] = reflect.ValueOf(m)
-  // Pass any additional arguments based on the message itself.
-  for i, _ := range args {
-        inputs[i+2] = reflect.ValueOf(args[i])
-    }
+	logger.Info(m.Content)
+	args := parseArguments(m.Content)
+	// Pass the original session and message arguments.
+	inputs := make([]reflect.Value, len(args)+2)
+	inputs[0] = reflect.ValueOf(s)
+	inputs[1] = reflect.ValueOf(m)
+	// Pass any additional arguments based on the message itself.
+	for i, _ := range args {
+		inputs[i+2] = reflect.ValueOf(args[i])
+	}
 
 	// Ignore all messages created by the bot itself
 	// This isn't required in this specific example but it's a good practice.
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-  method := reflect.ValueOf(bot).MethodByName(parseCommand(m.Content))
-  if method.IsValid() && len(inputs) >= method.Type().NumIn(){
-    // Trim all unnecessary arguments. 
-    inputs = inputs[:method.Type().NumIn()]
-	  method.Call(inputs)
-  }
+	method := reflect.ValueOf(bot).MethodByName(parseCommand(m.Content))
+	if method.IsValid() && len(inputs) >= method.Type().NumIn() {
+		// Trim all unnecessary arguments.
+		inputs = inputs[:method.Type().NumIn()]
+		method.Call(inputs)
+	}
 }
