@@ -85,7 +85,7 @@ func parseCommand(s string) string {
 	return ""
 }
 
-// Return all command arguments, i.e. all words except from the first one.
+// Returns all command arguments, i.e. all words except from the first one.
 // If the arguments include brackets, consider them as one arguments, e.g.
 // .foo bar "hello world" -> ["bar", "hello world"]
 func parseArguments(s string) []string {
@@ -113,8 +113,6 @@ func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 	}
 }
 
-// This function will be called (due to AddHandler above) every time a new
-// message is created on any channel that the autenticated bot has access to.
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	logger.Info(m.Content)
 	args := parseArguments(m.Content)

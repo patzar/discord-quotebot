@@ -9,16 +9,18 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// Bot holds the bot state.
 type Bot struct {
 	db *bolt.DB
 }
 
+// UserQuotes stores quotes of a particular user.
 type UserQuotes struct {
 	Quotes   []string
 	Username string
 }
 
-type selector func([]string) string
+type selector func([]string) (string, int)
 
 // Saves quote to the database. Returns true if the save was successful.
 func (b Bot) quoteImpl(user string, text string, messageID string) bool {
@@ -68,22 +70,26 @@ func (b Bot) viewQuote(s *discordgo.Session, m *discordgo.MessageCreate, user st
 			var userQuote UserQuotes
 			json.Unmarshal(v, &userQuote)
 			if len(userQuote.Quotes) > 0 {
-				q := fn(userQuote.Quotes)
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> %s", q))
+				q, i := fn(userQuote.Quotes)
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> #%d: %s", i, q))
 			}
 		}
 		return nil
 	})
 }
 
+// Randomquote views a random quote. 
 func (b Bot) Randomquote(s *discordgo.Session, m *discordgo.MessageCreate, user string) {
-	b.viewQuote(s, m, user, func(quotes []string) string {
-		return quotes[rand.Intn(len(quotes))]
+	b.viewQuote(s, m, user, func(quotes []string) (string, int) {
+		i := rand.Intn(len(quotes))
+		return quotes[i], i
 	})
 }
 
+// Lastquote views a last quote. 
 func (b Bot) Lastquote(s *discordgo.Session, m *discordgo.MessageCreate, user string) {
-	b.viewQuote(s, m, user, func(quotes []string) string {
-		return quotes[len(quotes)-1]
+	b.viewQuote(s, m, user, func(quotes []string) (string, int) {
+		i := len(quotes)-1
+		return quotes[i], i 
 	})
 }
