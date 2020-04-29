@@ -99,6 +99,10 @@ func parseArguments(s string) []string {
 
 func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 	fmt.Println(m.Emoji.Name)
+	// Ignore all messages created by the bot itself
+	if m.UserID == s.State.User.ID {
+		return
+	}
 	if m.Emoji.Name == "❤️" {
 		message, err := s.ChannelMessage(m.ChannelID, m.MessageID)
 		if err != nil {
