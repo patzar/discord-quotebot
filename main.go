@@ -99,12 +99,12 @@ func parseArguments(s string) []string {
 
 func messageReactionAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
 	fmt.Println(m.Emoji.Name)
+	message, err := s.ChannelMessage(m.ChannelID, m.MessageID)
 	// Ignore all messages created by the bot itself
-	if m.UserID == s.State.User.ID {
+	if err != nil || message.Author.ID == s.State.User.ID {
 		return
 	}
 	if m.Emoji.Name == "❤️" {
-		message, err := s.ChannelMessage(m.ChannelID, m.MessageID)
 		if err != nil {
 			logger.Fatalf("error loading Discord message,", err)
 			return
