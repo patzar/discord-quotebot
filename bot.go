@@ -62,6 +62,9 @@ func (b Bot) quoteImpl(user string, text string, messageID string) bool {
 			userQuote = UserQuotes{[]string{}, user, map[string]string{}}
 		}
 		userQuote.Quotes = append(userQuote.Quotes, text)
+		if userQuote.QuoteIDs == nil {
+			userQuote.QuoteIDs = map[string]string{}
+		}
 		userQuote.QuoteIDs[text] = messageID
 		userQuoteSerialized, err := json.Marshal(userQuote)
 
